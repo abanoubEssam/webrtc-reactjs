@@ -1,29 +1,43 @@
 import React, { useState, useEffect } from "react";
 import socketIOClient from "socket.io-client";
-const ENDPOINT = "http://127.0.0.1:3000";
+import Profile from "./components/Profile/profile.component";
+import UsersList from "./components/Users/usersList.component";
+const ENDPOINT = "wss://webrtc-server-api.herokuapp.com/";
+// const ENDPOINT = "http://localhost:3000/";
 
 function App() {
-  const [response, setResponse] = useState([]);
-
+  const [usersList, setUsersList] = useState([]);
+  const [currentUser, setCurrentUser] = useState({})
+  const [socketClient, setSocketClient] = useState(null)
   useEffect(() => {
-    const socket = socketIOClient(ENDPOINT);
-    const openMediaDevices = async (constraints) => {
-      return await navigator.mediaDevices.getUserMedia(constraints);
-    }
-    socket.on("update-user-list", data => {
-      console.log("App -> data", data.users)
-      const stream = openMediaDevices({ 'video': true, 'audio': true });
-      console.log('Got MediaStream:', stream);
-      setResponse(data.users);
-    });
 
+    const socket = socketIOClient(ENDPOINT);
+    
+    socket.on("conn-success", data => {
+      console.log("ME", data)
+      setCurrentUser(data)
+    })
+
+    socket.on("users-list", (data) => {
+      console.log("App -> !!!!!!!!! users-list", data)
+      setUsersList(data);
+    });
+    setSocketClient(socket)
+    return () => {
+      socket.disconnect()
+    };
   }, []);
+
+  
+  if (usersList) {
+    console.log("usersList ", usersList)
+  }
+
 
   return (
     <div>
-      {response.map(client => {
-        return <div key={client}> client: {client} connected </div>
-      })}
+      <Profile currentUser={currentUser} />
+      {usersList.length > 0 ? <UsersList currentUser={currentUser} usersList={usersList} socketClient={socketClient} /> : null}
     </div>
   );
 }
